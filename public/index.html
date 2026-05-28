@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Notes Kodemade - Fun Edition</title>
+    <style>
+        /* (Garde exactement tout ton code CSS original ici, je l'ai raccourci pour la lisibilité) */
+        body { font-family: "Comic Sans MS", "Comic Sans", cursive; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; background-color: #f4f4f4; overflow-x: hidden; }
+        .bg-gif { position: fixed; z-index: -1; opacity: 0.5; pointer-events: none; border-radius: 10px; }
+        .gif-tl { top: 5%; left: 5%; height: 100px; transform: rotate(-10deg); }
+        .gif-tr { top: 5%; right: 5%; height: 120px; transform: rotate(15deg); }
+        .gif-bl { bottom: 5%; left: 5%; height: 110px; transform: rotate(5deg); }
+        .gif-br { bottom: 5%; right: 5%; height: 130px; transform: rotate(-15deg); }
+        .container { position: relative; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; z-index: 1; }
+        h1 { color: #333; margin-bottom: 25px; text-decoration: underline wavy #28a745; }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 16px; }
+        input:focus, textarea:focus { outline: none; border-color: #28a745; }
+        button { background-color: #28a745; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-family: inherit; font-weight: bold; font-size: 18px; transition: all 0.2s ease; }
+        button:hover { background-color: #882173; transform: scale(1.02); }
+        .note { background: #fff; border-left: 5px solid #28a745; padding: 15px; margin-top: 20px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: left; }
+        .note h3 { margin: 0 0 10px 0; color: #882173; }
+        .delete-btn { background-color: #dcc635; color: #333; font-size: 14px; width: auto; margin-top: 15px; padding: 5px 15px; }
+        .delete-btn:hover { background-color: #bfa52a; }
+        #cursorGif { position: fixed; width: 70px; pointer-events: none; display: none; z-index: 10000; transform: translate(15px, 15px); }
+    </style>
+</head>
+<body>
+    <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExOW90aHA2ZWZiNWw0a3JtZjFqb2pkeGM4MnZnM2F0MzBvZ2VlaGUwcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LKvHJSPgCj4BjF1F5e/giphy.gif" class="bg-gif gif-tl">
+    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmI4cnlpZjZibzM0bnFrYXUzbmpwejVuODVyMmV4OWVjcmtnYWg1aiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cFdHXXm5GhJsc/giphy.gif" class="bg-gif gif-tr">
+    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmI4cnlpZjZibzM0bnFrYXUzbmpwejVuODVyMmV4OWVjcmtnYWg1aiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VbnUQpnihPSIgIXuZv/giphy.gif" class="bg-gif gif-bl">
+    <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExOW90aHA2ZWZiNWw0a3JtZjFqb2pkeGM4MnZnM2F0MzBvZ2VlaGUwcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LKvHJSPgCj4BjF1F5e/giphy.gif" class="bg-gif gif-br">
+    <img id="cursorGif" src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MDJ0cHA3MjdmMWNlM3gxNjJidW12dW1jcGhoYzh4ODY2c2RuN2c1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/LWJ7cKyiWPCnVyuAhT/giphy.gif">
+
+    <div class="container">
+        <h1>Mes Notes Kodemade</h1>
+        <input type="text" id="noteTitle" placeholder="Titre de la note...">
+        <textarea id="noteText" rows="4" placeholder="Quoi de neuf ? : O "></textarea>
+        <button onclick="saveNote()">Ajouter la note (enfin)</button>
+        <div id="notesDisplay"></div>
+    </div>
+
+    <script>
+        const cursorImage = document.getElementById('cursorGif');
+        let currentNotes = [];
+
+        window.onload = () => {
+            fetchNotes();
+            document.addEventListener('mousemove', (e) => {
+                cursorImage.style.left = e.clientX + 'px';
+                cursorImage.style.top = e.clientY + 'px';
+            });
+            document.addEventListener('mouseover', (e) => {
+                if (e.target.tagName === 'BUTTON') cursorImage.style.display = 'block';
+            });
+            document.addEventListener('mouseout', (e) => {
+                if (e.target.tagName === 'BUTTON') cursorImage.style.display = 'none';
+            });
+        };
+
+        // Récupérer les notes depuis le serveur (le volume Kubernetes)
+        async function fetchNotes() {
+            const response = await fetch('/api/notes');
+            currentNotes = await response.json();
+            renderNotes();
+        }
+
+        // Sauvegarder sur le serveur
+        async function saveNote() {
+            const t = document.getElementById('noteTitle').value;
+            const c = document.getElementById('noteText').value;
+            if (!t || !c) return alert("Remplis tout !");
+
+            const n = { id: Date.now(), title: t, content: c };
+            currentNotes.push(n);
+
+            await fetch('/api/notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentNotes)
+            });
+
+            document.getElementById('noteTitle').value = '';
+            document.getElementById('noteText').value = '';
+            renderNotes();
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notesDisplay');
+            container.innerHTML = '';
+            currentNotes.slice().reverse().forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note';
+                div.innerHTML = `
+                    <h3>${note.title}</h3>
+                    <p>${note.content}</p>
+                    <button class="delete-btn" onclick="removeNote(${note.id})">Supprimer</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function removeNote(id) {
+            currentNotes = currentNotes.filter(n => n.id !== id);
+            await fetch('/api/notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentNotes)
+            });
+            cursorImage.style.display = 'none';
+            renderNotes();
+        }
+    </script>
+</body>
+</html>
